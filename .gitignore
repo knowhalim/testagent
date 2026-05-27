@@ -54,6 +54,7 @@ htmlcov/
 
 # ---------- Documentation ----------
 *.md
+!README.md
 
 # ---------- Claude ----------
 .claude/
