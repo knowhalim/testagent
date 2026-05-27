@@ -52,8 +52,9 @@ export function SettingsLogs() {
         "/admin/logs",
         params
       );
-      setLogs(data.items);
-      setTotalPages(data.total_pages);
+      const items = Array.isArray(data) ? data : (data.items || []);
+      setLogs(items);
+      setTotalPages((data as { total_pages?: number }).total_pages || 1);
     } catch {
       // Error handled silently
     } finally {
@@ -74,7 +75,7 @@ export function SettingsLogs() {
           log.level,
           `"${log.action}"`,
           `"${log.user_name}"`,
-          `"${log.details}"`,
+          `"${typeof log.details === "string" ? log.details : JSON.stringify(log.details).replace(/"/g, '""')}"`,
         ].join(",")
       ),
     ].join("\n");
@@ -178,7 +179,7 @@ export function SettingsLogs() {
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   <span className="text-sm text-text-tertiary truncate max-w-[300px] block">
-                    {log.details}
+                    {typeof log.details === "string" ? log.details : JSON.stringify(log.details)}
                   </span>
                 </TableCell>
               </TableRow>

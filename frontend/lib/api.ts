@@ -2,22 +2,37 @@ type FetchOptions = RequestInit & {
   params?: Record<string, string>;
 };
 
-let accessToken: string | null = null;
-let refreshToken: string | null = null;
+function isBrowser() {
+  return typeof window !== "undefined";
+}
+
+let accessToken: string | null = isBrowser() ? localStorage.getItem("ta_access") : null;
+let refreshToken: string | null = isBrowser() ? localStorage.getItem("ta_refresh") : null;
 let refreshPromise: Promise<string | null> | null = null;
 
 export function setTokens(access: string, refresh?: string) {
   accessToken = access;
   if (refresh) refreshToken = refresh;
+  if (isBrowser()) {
+    localStorage.setItem("ta_access", access);
+    if (refresh) localStorage.setItem("ta_refresh", refresh);
+  }
 }
 
 export function getAccessToken(): string | null {
+  if (!accessToken && isBrowser()) {
+    accessToken = localStorage.getItem("ta_access");
+  }
   return accessToken;
 }
 
 export function clearTokens() {
   accessToken = null;
   refreshToken = null;
+  if (isBrowser()) {
+    localStorage.removeItem("ta_access");
+    localStorage.removeItem("ta_refresh");
+  }
 }
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -104,7 +119,14 @@ export async function apiFetch<T = unknown>(
     let message = "An error occurred";
     try {
       const errorData = await response.json();
-      message = errorData.detail || errorData.message || message;
+      const detail = errorData.detail || errorData.message;
+      if (typeof detail === "string") {
+        message = detail;
+      } else if (Array.isArray(detail)) {
+        message = detail.map((d: { msg?: string }) => d.msg || String(d)).join(", ");
+      } else if (detail && typeof detail === "object") {
+        message = JSON.stringify(detail);
+      }
     } catch {
       message = response.statusText;
     }

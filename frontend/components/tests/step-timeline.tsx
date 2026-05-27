@@ -66,7 +66,7 @@ function StepItem({
   isLast: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const config = statusConfig[step.status];
+  const config = statusConfig[step.status] || statusConfig.pending;
   const Icon = config.icon;
 
   return (

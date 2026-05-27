@@ -58,28 +58,25 @@ async def _run_uat_test(test_id: str):
             from app.services.settings_service import SettingsService
             creds = await SettingsService.get_llm_credentials(db, test.llm_provider)
 
-            # Build LLM instance based on provider
+            # Build LLM instance based on provider (using browser-use's own LLM wrappers)
             llm = None
             if test.llm_provider == "openai":
-                from langchain_openai import ChatOpenAI
+                from browser_use.llm.openai.chat import ChatOpenAI
                 llm = ChatOpenAI(
                     model=test.llm_model or creds.get("model", "gpt-4o"),
                     api_key=creds.get("api_key", ""),
-                    temperature=0.0,
                 )
             elif test.llm_provider == "anthropic":
-                from langchain_anthropic import ChatAnthropic
+                from browser_use.llm.anthropic.chat import ChatAnthropic
                 llm = ChatAnthropic(
                     model=test.llm_model or creds.get("model", "claude-sonnet-4-20250514"),
                     api_key=creds.get("api_key", ""),
-                    temperature=0.0,
                 )
             elif test.llm_provider == "ollama":
-                from langchain_community.chat_models import ChatOllama
+                from browser_use.llm.ollama.chat import ChatOllama
                 llm = ChatOllama(
                     model=test.llm_model or creds.get("model", "llama3.1"),
                     base_url=creds.get("base_url", "http://localhost:11434"),
-                    temperature=0.0,
                 )
 
             if not llm:

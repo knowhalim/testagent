@@ -55,13 +55,13 @@ async def _run_ui_audit(test_id: str):
 
             # Call the Midscene.js node sidecar
             request_payload = {
-                "test_id": test_id,
-                "target_url": test.target_url,
+                "url": test.target_url,
                 "instructions": test.instructions,
                 "llm_provider": test.llm_provider,
                 "llm_model": test.llm_model,
-                "llm_credentials": creds,
-                "auth_config": test.auth_config,
+                "llm_api_key": creds.get("api_key", ""),
+                "llm_base_url": creds.get("base_url", ""),
+                "screenshot_dir": f"/tmp/testagent-screenshots/{test_id}",
             }
 
             async with httpx.AsyncClient(timeout=300.0) as client:

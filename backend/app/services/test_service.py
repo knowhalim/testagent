@@ -17,15 +17,27 @@ class TestService:
 
     @staticmethod
     async def create_test(db: AsyncSession, user_id: UUID, data: CreateTestSchema) -> Test:
+        from app.services.settings_service import SettingsService
+
+        llm_provider = data.llm_provider
+        llm_model = data.llm_model
+
+        # Fill from admin settings if not provided
+        if not llm_provider:
+            llm_provider = await SettingsService.get(db, "default_llm_provider") or "openai"
+        if not llm_model:
+            model_key = f"{llm_provider}_model"
+            llm_model = await SettingsService.get(db, model_key) or "gpt-4o"
+
         test = Test(
             user_id=user_id,
             name=data.name,
             target_url=data.target_url,
             engine=data.engine,
-            instructions=data.instructions,
+            instructions=data.instructions or f"Navigate to {data.target_url} and verify the page loads correctly",
             uploaded_file_path=data.uploaded_file_path,
-            llm_provider=data.llm_provider,
-            llm_model=data.llm_model,
+            llm_provider=llm_provider,
+            llm_model=llm_model,
             auth_config=data.auth_config,
             status="pending",
         )

@@ -46,8 +46,8 @@ export function SettingsUsers() {
 
   const fetchUsers = async () => {
     try {
-      const data = await api.get<User[]>("/admin/users");
-      setUsers(data);
+      const data = await api.get<{ items: User[] } | User[]>("/admin/users");
+      setUsers(Array.isArray(data) ? data : data.items || []);
     } catch {
       // Error handled silently
     } finally {

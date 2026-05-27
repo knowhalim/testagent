@@ -27,4 +27,9 @@ celery_app.conf.update(
     },
 )
 
-celery_app.autodiscover_tasks(["app.workers"])
+# Explicitly include task modules
+celery_app.conf.include = [
+    "app.workers.uat_task",
+    "app.workers.ui_audit_task",
+    "app.workers.ux_audit_task",
+]
