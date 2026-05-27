@@ -1,0 +1,152 @@
+version: "3.9"
+
+services:
+  # ---------- Frontend (Next.js) ----------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - default
+
+  # ---------- Backend (FastAPI) ----------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-testagent}:${DB_PASS:-testagent}@postgres:5432/${DB_NAME:-testagent}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - NODE_WORKER_URL=http://node-worker:4000
+      - DATA_DIR=/app/data
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OLLAMA_URL=${OLLAMA_URL:-http://ollama:11434}
+    volumes:
+      - app-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - default
+
+  # ---------- Celery Worker ----------
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2 -Q celery,uat,audit
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-testagent}:${DB_PASS:-testagent}@postgres:5432/${DB_NAME:-testagent}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - NODE_WORKER_URL=http://node-worker:4000
+      - DATA_DIR=/app/data
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OLLAMA_URL=${OLLAMA_URL:-http://ollama:11434}
+    volumes:
+      - app-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      node-worker:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - default
+
+  # ---------- Node Worker (Midscene + Playwright) ----------
+  node-worker:
+    build:
+      context: ./workers/node-worker
+      dockerfile: Dockerfile
+    ports:
+      - "${NODE_WORKER_PORT:-4000}:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+    volumes:
+      - app-data:/tmp/testagent-screenshots
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - default
+
+  # ---------- PostgreSQL ----------
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${DB_USER:-testagent}
+      - POSTGRES_PASSWORD=${DB_PASS:-testagent}
+      - POSTGRES_DB=${DB_NAME:-testagent}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-testagent} -d ${DB_NAME:-testagent}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - default
+
+  # ---------- Redis ----------
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - default
+
+volumes:
+  pg-data:
+    driver: local
+  redis-data:
+    driver: local
+  app-data:
+    driver: local
+
+networks:
+  default:
+    driver: bridge

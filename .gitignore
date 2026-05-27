@@ -1,0 +1,67 @@
+# ---------- Dependencies ----------
+node_modules/
+.pnp/
+.pnp.js
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.eggs/
+
+# ---------- Build output ----------
+dist/
+.next/
+out/
+build/
+
+# ---------- Environment ----------
+.env
+.env.local
+.env.*.local
+
+# ---------- Data & Volumes ----------
+data/
+pg-data/
+redis-data/
+ollama-data/
+
+# ---------- IDE ----------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+
+# ---------- Logs ----------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---------- Testing ----------
+coverage/
+.nyc_output/
+htmlcov/
+.pytest_cache/
+
+# ---------- Documentation ----------
+*.md
+
+# ---------- Claude ----------
+.claude/
+
+# ---------- Lock files (regenerated on install) ----------
+pnpm-lock.yaml
+package-lock.json
+
+# ---------- Misc ----------
+*.tgz
+*.tar.gz
